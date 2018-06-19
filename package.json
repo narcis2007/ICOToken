@@ -1,0 +1,15 @@
+{
+  "name": "impetus-contracts",
+  "version": "1.0.0",
+  "description": "Impetus smart contracts",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "bignumber.js": "^5.0.0",
+    "openzeppelin-solidity": "^1.9.0",
+    "remixd": "^0.1.8-alpha.4",
+    "web3": "^1.0.0-beta.34"
+  }
+}
