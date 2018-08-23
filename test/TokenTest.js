@@ -18,9 +18,9 @@ contract('ICOToken', async (accounts) => {
 
     describe('token', function() {
 
-        it('should return the correct supplyCap after construction',async () => {
+        it('should return the correct total supply after construction',async () => {
             let token = await deployTokenContract();
-            let totalSupply = await token.getSupplyCap()
+            let totalSupply = await token.totalSupply()
             assert.equal(totalSupply.toNumber(), MAX_SUPPLY)
         });
 
@@ -47,8 +47,6 @@ contract('ICOToken', async (accounts) => {
 
         it('should allow transfer() 100 units from accounts[0] to accounts[1]', async function() {
             let token = await deployTokenContract();
-            await token.setMintAgent(accounts[0], true);
-            await token.mint(accounts[0], MAX_SUPPLY);
 
             let amount = 100
 
@@ -69,32 +67,20 @@ contract('ICOToken', async (accounts) => {
 
         it('should throw an error when trying to transfer more than a balance', async function () {
             let token = await deployTokenContract();
-            await token.setMintAgent(accounts[0], true);
-            await token.mint(accounts[1], MAX_SUPPLY);
 
-            let accountStartingBalance = await token.balanceOf(accounts[1]);
+            let accountStartingBalance = await token.balanceOf(accounts[0]);
             let amount = accountStartingBalance + 1;
-            await expectThrow(  token.transfer(accounts[2], amount, { from: accounts[1] }));
+            await expectThrow(  token.transfer(accounts[2], amount, { from: accounts[0] }));
         });
 
     });
 
-    describe('minting', function () {
+    describe('token distribution', function () {
 
-        it('should throw an error when trying to mint more than the maximum supply cap', async function () {
+        it('should give the owner the maximum supply cap after deploy', async function () {
             let token = await deployTokenContract();
-            await token.setMintAgent(accounts[0], true);
-            await expectThrow(  token.mint(accounts[1], MAX_SUPPLY +1));
-            assert.equal(await token.totalSupply(), 0, "totalSupply not 0")
-        });
-
-        it('should throw an error when trying to mint after the minting has been stopped', async function () {
-            let token = await deployTokenContract();
-            await token.setMintAgent(accounts[0], true);
-            await token.mint(accounts[1], 1);
-            await token.stopMintingForever();
-            await expectThrow( token.mint(accounts[1], 1));
-            assert.equal(await token.totalSupply(), 1, "totalSupply incorrect")
+            assert.equal(await token.totalSupply(), MAX_SUPPLY.toNumber())
+            assert.equal(await token.balanceOf(accounts[0]), MAX_SUPPLY.toNumber())
         });
     });
 
@@ -102,8 +88,6 @@ contract('ICOToken', async (accounts) => {
 
         it('should return the correct allowance amount after approval', async function () {
             let token = await deployTokenContract();
-            await token.setMintAgent(accounts[0], true);
-            await token.mint(accounts[0], MAX_SUPPLY);
 
             let amount = 100;
 
@@ -121,8 +105,6 @@ contract('ICOToken', async (accounts) => {
 
         it('should allow transfer from allowed account', async function () {
             let token = await deployTokenContract();
-            await token.setMintAgent(accounts[0], true);
-            await token.mint(accounts[0], MAX_SUPPLY);
 
             let amount = 100;
 
@@ -148,8 +130,6 @@ contract('ICOToken', async (accounts) => {
 
         it('should throw an error when trying to transfer more than allowed', async function() {
             let token = await deployTokenContract();
-            await token.setMintAgent(accounts[0], true);
-            await token.mint(accounts[0], MAX_SUPPLY);
             let amount = 100;
 
             //owner(account[0]) approves to account[1] to spend the amount
@@ -161,8 +141,6 @@ contract('ICOToken', async (accounts) => {
 
         it('should throw an error when trying to transfer from not allowed account', async function() {
             let token = await deployTokenContract();
-            await token.setMintAgent(accounts[0], true);
-            await token.mint(accounts[0], MAX_SUPPLY);
             let amount = 100;
             await expectThrow( token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}))
         })
@@ -172,8 +150,6 @@ contract('ICOToken', async (accounts) => {
 
         it('owner should be able to burn tokens', async function () {
             let token = await deployTokenContract();
-            await token.setMintAgent(accounts[0], true);
-            await token.mint(accounts[0], MAX_SUPPLY);
             let balance              = await token.balanceOf(accounts[0]);
             let totalSupply          = await token.totalSupply();
             let luckys_burned_amount = 100;
@@ -203,9 +179,8 @@ contract('ICOToken', async (accounts) => {
         it('should be able to freeze transfers for certain addresses', async function () {
 
             let token = await deployTokenContract();
-            await token.setMintAgent(accounts[0], true);
-            await token.mint(accounts[1], 1000);
 
+            await token.transfer(accounts[1], 1000, { from: accounts[0] });
             let amount = 1000;
 
             //owner(account[1]) approves to account[0] to spend the amount
@@ -232,8 +207,7 @@ contract('ICOToken', async (accounts) => {
 
         it('should be able to realocate tokens to a new address in an emergency case', async function () {
             let token = await deployTokenContract();
-            await token.setMintAgent(accounts[0], true);
-            await token.mint(accounts[1], 1000);
+            await token.transfer(accounts[1], 1000, { from: accounts[0] });
 
             await token.freezeAddress(accounts[1],{from:accounts[0]});
             await token.restoreFunds(accounts[1], accounts[2], 1000)
@@ -246,8 +220,7 @@ contract('ICOToken', async (accounts) => {
 
         it('should let only the owner reallocate stolen tokens', async function () {
             let token = await deployTokenContract();
-            await token.setMintAgent(accounts[0], true);
-            await token.mint(accounts[1], 1000);
+            await token.transfer(accounts[1], 1000, { from: accounts[0] });
 
             await token.freezeAddress(accounts[1],{from:accounts[0]});
 
@@ -256,6 +229,30 @@ contract('ICOToken', async (accounts) => {
             let account1Balance = await token.balanceOf(accounts[1]);
 
             assert.equal(account1Balance, 1000);
+        });
+    });
+
+    describe('pausable', function () {
+
+        it('should not be able to transfer tokens when paused', async function () {
+            let token  = await deployTokenContract();
+            let amount = 100;
+
+            //owner(account[0]) approves to account[1] to spend the amount
+            await token.approve(accounts[1], amount);
+
+            await token.pause();
+
+            await expectThrow(  token.transfer(accounts[2], amount, { from: accounts[0] }));
+
+            await expectThrow(  token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}))
+
+            await token.unpause();
+
+            await token.transfer(accounts[2], amount, { from: accounts[0] });
+
+            await token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}); //acc1 transfers from acc0 to acc2
+
         });
     });
 

@@ -1,4 +1,35 @@
 pragma solidity ^0.4.20;
+
+
+/*
+ * Ownable
+ *
+ * Base contract with an owner.
+ * Provides onlyOwner modifier, which prevents function from running if it is called by anyone other than the owner.
+ */
+contract Ownable {
+    address public owner;
+
+    function Ownable() {
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner() {
+        if (msg.sender != owner) {
+            revert();
+        }
+        _;
+    }
+
+    function transferOwnership(address newOwner) onlyOwner {
+        if (newOwner != address(0)) {
+            owner = newOwner;
+        }
+    }
+
+}
+
+
 /*
  * ERC20 interface
  * see https://github.com/ethereum/EIPs/issues/20
@@ -68,7 +99,6 @@ contract SafeMath {
         }
     }
 }
-
 
 
 /**
@@ -179,98 +209,82 @@ contract StandardToken is ERC20, SafeMath {
 
 }
 
-/*
- * Ownable
- *
- * Base contract with an owner.
- * Provides onlyOwner modifier, which prevents function from running if it is called by anyone other than the owner.
+/**
+ * @title Pausable
+ * @dev Base contract which allows children to implement an emergency stop mechanism.
  */
-contract Ownable {
-    address public owner;
+contract Pausable is Ownable {
+    event Pause();
+    event Unpause();
 
-    function Ownable() {
-        owner = msg.sender;
-    }
+    bool public paused = false;
 
-    modifier onlyOwner() {
-        if (msg.sender != owner) {
-            revert();
-        }
+
+    /**
+     * @dev Modifier to make a function callable only when the contract is not paused.
+     */
+    modifier whenNotPaused() {
+        require(!paused);
         _;
     }
 
-    function transferOwnership(address newOwner) onlyOwner {
-        if (newOwner != address(0)) {
-            owner = newOwner;
-        }
+    /**
+     * @dev Modifier to make a function callable only when the contract is paused.
+     */
+    modifier whenPaused() {
+        require(paused);
+        _;
     }
 
+    /**
+     * @dev called by the owner to pause, triggers stopped state
+     */
+    function pause() onlyOwner whenNotPaused public {
+        paused = true;
+        emit Pause();
+    }
+
+    /**
+     * @dev called by the owner to unpause, returns to normal state
+     */
+    function unpause() onlyOwner whenPaused public {
+        paused = false;
+        emit Unpause();
+    }
 }
 
 /**
- * A token that can increase its supply by another contract.
- *
- * This allows uncapped crowdsale by dynamically increasing the supply when money pours in.
- * Only mint agents, contracts whitelisted by owner, can mint new tokens.
- *
- */
-contract MintableToken is StandardToken, Ownable {
+ * @title Pausable token
+ * @dev StandardToken modified with pausable transfers.
+ **/
+contract PausableToken is StandardToken, Pausable {
 
-    /** List of agents that are allowed to create new tokens */
-    mapping (address => bool) public mintAgents;
-    bool public isMintingEnabled = true;
-
-    event MintingAgentChanged(address addr, bool state  );
-
-
-    /**
-     * Create new tokens and allocate them to an address..
-     *
-     * Only callably by a crowdsale contract (mint agent).
-     */
-    function mint(address receiver, uint amount) onlyMintAgent canMint public {
-        totalSupply = safeAdd(totalSupply, amount);
-        balances[receiver] = safeAdd(balances[receiver], amount);
-
-        // This will make the mint transaction apper in EtherScan.io
-        // We can remove this after there is a standardized minting event
-        Transfer(0, receiver, amount);
+    function transfer(address _to, uint256 _value) public whenNotPaused returns (bool) {
+        return super.transfer(_to, _value);
     }
 
-    modifier canMint(){
-        if(!isMintingEnabled) {
-            revert();
-        }
-        _;
+    function transferFrom(address _from, address _to, uint256 _value) public whenNotPaused returns (bool) {
+        return super.transferFrom(_from, _to, _value);
     }
 
-    function stopMintingForever() onlyOwner {
-        isMintingEnabled = false;
+    function approve(address _spender, uint256 _value) public whenNotPaused returns (bool) {
+        return super.approve(_spender, _value);
     }
 
-    /**
-     * Owner can allow a crowdsale contract to mint new tokens.
-     */
-    function setMintAgent(address addr, bool state) onlyOwner public {
-        mintAgents[addr] = state;
-        MintingAgentChanged(addr, state);
+    function increaseApproval(address _spender, uint _addedValue) public whenNotPaused returns (bool success) {
+        return super.increaseApproval(_spender, _addedValue);
     }
 
-    modifier onlyMintAgent() {
-        // Only crowdsale contracts are allowed to mint new tokens
-        if(!mintAgents[msg.sender]) {
-            revert();
-        }
-        _;
+    function decreaseApproval(address _spender, uint _subtractedValue) public whenNotPaused returns (bool success) {
+        return super.decreaseApproval(_spender, _subtractedValue);
     }
-
 }
 
 /**
  * @title Freezable
  * @dev Base contract which allows children to freeze the operations from a certain address in case of an emergency.
  */
-contract Freezable  is Ownable {
+contract Freezable is Ownable {
 
     mapping (address => bool) internal frozenAddresses;
 
@@ -334,34 +348,6 @@ contract AntiTheftToken is FreezableToken {
     }
 }
 
-/**
- * A token that can increase its supply by another contract up to a certain limit.
- *
- * This allows a capped crowdsale.
- * Only mint agents, contracts whitelisted by owner, can mint new tokens.
- *
- */
-contract CappedMintableToken is MintableToken{
-    /** The maximum number of tokens that can ever exist */
-    uint256 public supplyCap;
-
-    constructor(uint _supplyCap){
-        supplyCap = _supplyCap;
-    }
-
-    function mint(address receiver, uint amount) onlyMintAgent public {
-        // Check that the cap has not been reached before minting new tokens
-        assert(safeAdd(totalSupply, amount) <= supplyCap);
-        if(totalSupply == supplyCap)
-            isMintingEnabled = false;
-        MintableToken.mint(receiver, amount);
-    }
-
-    function getSupplyCap() constant returns (uint){
-        return supplyCap;
-    }
-}
-
 contract BurnableToken is StandardToken {
 
     /** How many tokens we burned */
@@ -379,13 +365,16 @@ contract BurnableToken is StandardToken {
     }
 }
 
-contract ICOToken is CappedMintableToken, BurnableToken, AntiTheftToken {
+contract ICOToken is BurnableToken, AntiTheftToken, PausableToken {
 
-    constructor(string _name, string _symbol, uint _decimals, uint _max_supply) CappedMintableToken(_max_supply * (10 ** _decimals)) {
+    constructor(string _name, string _symbol, uint _decimals, uint _max_supply){
         symbol = _symbol;
         name = _name;
         decimals = _decimals;
-
+        
+        totalSupply = _max_supply * (10 ** _decimals);
+        balances[msg.sender] = totalSupply;
+        emit Transfer(0x0, msg.sender, totalSupply);
     }
 
 }
