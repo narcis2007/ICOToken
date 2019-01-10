@@ -1,5 +1,5 @@
 {
-  "name": "impetus-contracts",
+  "name": "ico-token",
   "version": "1.0.0",
   "description": "Generic ICO Token",
   "main": "truffle-config.js",
