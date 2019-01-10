@@ -1,7 +1,7 @@
 {
   "name": "impetus-contracts",
   "version": "1.0.0",
-  "description": "Impetus smart contracts",
+  "description": "Generic ICO Token",
   "main": "truffle-config.js",
   "directories": {
     "test": "test"
