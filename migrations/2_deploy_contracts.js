@@ -5,7 +5,7 @@ var ICOToken = artifacts.require("ICOToken");
 
 module.exports = function(deployer, network, accounts) {
 
-    return deployer.deploy(ICOToken, "Test Token", "TST", 8, 100, { from: accounts[0], gas: 4700000 }).then(() => {
+    return deployer.deploy(ICOToken, "Test Token", "TST", 8, 100).then(() => {
             return ICOToken.deployed()
     })
 };

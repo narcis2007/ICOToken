@@ -16,27 +16,27 @@ contract('ICOToken', async (accounts) => {
 
     const MAX_SUPPLY = new BigNumber('100').mul(new BigNumber('10').pow(8));
 
-    describe('token', function() {
+    describe('token', function () {
 
-        it('should return the correct total supply after construction',async () => {
+        it('should return the correct total supply after construction', async () => {
             let token = await deployTokenContract();
             let totalSupply = await token.totalSupply()
             assert.equal(totalSupply.toNumber(), MAX_SUPPLY)
         });
 
-        it('should have the name TEST Token', async function() {
+        it('should have the name TEST Token', async function () {
             let token = await deployTokenContract();
             let name = await token.name()
             assert.equal(name, "Test Token", "Test Token wasn't the name")
         });
 
-        it('should have the symbol TST', async function() {
+        it('should have the symbol TST', async function () {
             let token = await deployTokenContract();
             let symbol = await token.symbol()
             assert.equal(symbol, "TST", "TST wasn't the symbol")
         });
 
-        it('should have 8 decimals', async function() {
+        it('should have 8 decimals', async function () {
             let token = await deployTokenContract();
             let decimals = await token.decimals()
             assert.equal(decimals, 8, "8 wasn't the number of decimals")
@@ -45,7 +45,7 @@ contract('ICOToken', async (accounts) => {
 
     describe('transfers', function () {
 
-        it('should allow transfer() 100 units from accounts[0] to accounts[1]', async function() {
+        it('should allow transfer() 100 units from accounts[0] to accounts[1]', async function () {
             let token = await deployTokenContract();
 
             let amount = 100
@@ -55,7 +55,7 @@ contract('ICOToken', async (accounts) => {
             let account1StartingBalance = await token.balanceOf(accounts[1])
 
             // transfer amount from account[0] to account[1]
-            await token.transfer(accounts[1], amount, { from: accounts[0] })
+            await token.transfer(accounts[1], amount, {from: accounts[0]})
 
             // final account[0] and account[1] balance
             let account0EndingBalance = await token.balanceOf(accounts[0])
@@ -70,7 +70,7 @@ contract('ICOToken', async (accounts) => {
 
             let accountStartingBalance = await token.balanceOf(accounts[0]);
             let amount = accountStartingBalance + 1;
-            await expectThrow(  token.transfer(accounts[2], amount, { from: accounts[0] }));
+            await expectThrow(token.transfer(accounts[2], amount, {from: accounts[0]}));
         });
 
     });
@@ -118,7 +118,7 @@ contract('ICOToken', async (accounts) => {
             await token.approve(accounts[1], amount);
 
             //account[1] orders a transfer from owner(account[0]) to account[1]
-            await token.transferFrom(accounts[0], accounts[2], amount, {from : accounts[1]});
+            await token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]});
             let account0AfterTransferBalance = await token.balanceOf(accounts[0]);
             let account1AfterTransferBalance = await token.balanceOf(accounts[1]);
             let account2AfterTransferBalance = await token.balanceOf(accounts[2]);
@@ -128,7 +128,7 @@ contract('ICOToken', async (accounts) => {
             assert.equal(amount, account2AfterTransferBalance)
         });
 
-        it('should throw an error when trying to transfer more than allowed', async function() {
+        it('should throw an error when trying to transfer more than allowed', async function () {
             let token = await deployTokenContract();
             let amount = 100;
 
@@ -136,25 +136,57 @@ contract('ICOToken', async (accounts) => {
             await token.approve(accounts[1], amount);
 
             let overflowed_amount = amount + 1;
-            await expectThrow(  token.transferFrom(accounts[0], accounts[2], overflowed_amount, {from: accounts[1]}));
+            await expectThrow(token.transferFrom(accounts[0], accounts[2], overflowed_amount, {from: accounts[1]}));
         })
 
-        it('should throw an error when trying to transfer from not allowed account', async function() {
+        it('should throw an error when trying to transfer from a not allowed account', async function () {
             let token = await deployTokenContract();
             let amount = 100;
-            await expectThrow( token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}))
+            await expectThrow(token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}))
         })
+
+        it('should be able to modify allowance', async function () {
+            let token = await deployTokenContract();
+
+            let amount = 100;
+
+            //owner(account[0]) approves to account[1] to spend the amount
+            await token.approve(accounts[1], amount);
+
+            assert.equal(amount, await token.allowance(accounts[0], accounts[1]));
+
+            await token.increaseApproval(accounts[1], 10);
+            assert.equal(amount + 10, await token.allowance(accounts[0], accounts[1]));
+
+            await token.decreaseApproval(accounts[1], 55);
+            assert.equal(amount - 45, await token.allowance(accounts[0], accounts[1]));
+            await token.decreaseApproval(accounts[1], 555);
+            assert.equal(0, await token.allowance(accounts[0], accounts[1]));
+        });
+
+        it('should not approve twice', async function () {
+            let token = await deployTokenContract();
+
+            let amount = 100;
+
+            //owner(account[0]) approves to account[1] to spend the amount
+            await token.approve(accounts[1], amount);
+
+            assert.equal(amount, await token.allowance(accounts[0], accounts[1]));
+
+            await expectThrow(token.approve(accounts[1], amount + 1));
+        });
     });
 
     describe('burnable', function () {
 
         it('owner should be able to burn tokens', async function () {
             let token = await deployTokenContract();
-            let balance              = await token.balanceOf(accounts[0]);
-            let totalSupply          = await token.totalSupply();
+            let balance = await token.balanceOf(accounts[0]);
+            let totalSupply = await token.totalSupply();
             let luckys_burned_amount = 100;
-            let expectedTotalSupply  = totalSupply - luckys_burned_amount;
-            let expectedBalance      = balance - luckys_burned_amount
+            let expectedTotalSupply = totalSupply - luckys_burned_amount;
+            let expectedBalance = balance - luckys_burned_amount
 
             const {logs} = await token.burn(luckys_burned_amount);
             let final_supply = await token.totalSupply();
@@ -170,7 +202,7 @@ contract('ICOToken', async (accounts) => {
             let token = await deployTokenContract();
             let totalSupply = await token.totalSupply();
             let luckys_burnable_amount = totalSupply + 1;
-            await expectThrow(  token.burn(luckys_burnable_amount));
+            await expectThrow(token.burn(luckys_burnable_amount));
         });
     });
 
@@ -180,26 +212,26 @@ contract('ICOToken', async (accounts) => {
 
             let token = await deployTokenContract();
 
-            await token.transfer(accounts[1], 1000, { from: accounts[0] });
+            await token.transfer(accounts[1], 1000, {from: accounts[0]});
             let amount = 1000;
 
             //owner(account[1]) approves to account[0] to spend the amount
-            await token.approve(accounts[0], amount, {from:accounts[1]});
+            await token.approve(accounts[0], amount, {from: accounts[1]});
 
 
-            await expectThrow(  token.freezeAddress(accounts[0],{from:accounts[1]}))
+            await expectThrow(token.freezeAddress(accounts[0], {from: accounts[1]}))
 
-            await token.transfer(accounts[2], 1, { from: accounts[1] });
+            await token.transfer(accounts[2], 1, {from: accounts[1]});
 
-            await token.freezeAddress(accounts[1],{from:accounts[0]});
+            await token.freezeAddress(accounts[1], {from: accounts[0]});
 
-            await expectThrow(  token.transfer(accounts[2], amount, { from: accounts[1] }))
+            await expectThrow(token.transfer(accounts[2], amount, {from: accounts[1]}))
 
-            await expectThrow(  token.transferFrom(accounts[1], accounts[3], amount, {from: accounts[0]}))
+            await expectThrow(token.transferFrom(accounts[1], accounts[3], amount, {from: accounts[0]}))
 
-            await token.unfreezeAddress(accounts[1],{from:accounts[0]});
+            await token.unfreezeAddress(accounts[1], {from: accounts[0]});
 
-            await token.transfer(accounts[2], 1, { from: accounts[1] });
+            await token.transfer(accounts[2], 1, {from: accounts[1]});
 
             await token.transferFrom(accounts[1], accounts[3], 1, {from: accounts[0]}); //acc1 transfers from acc0 to acc3
 
@@ -207,9 +239,9 @@ contract('ICOToken', async (accounts) => {
 
         it('should be able to realocate tokens to a new address in an emergency case', async function () {
             let token = await deployTokenContract();
-            await token.transfer(accounts[1], 1000, { from: accounts[0] });
+            await token.transfer(accounts[1], 1000, {from: accounts[0]});
 
-            await token.freezeAddress(accounts[1],{from:accounts[0]});
+            await token.freezeAddress(accounts[1], {from: accounts[0]});
             await token.restoreFunds(accounts[1], accounts[2], 1000)
 
             let account2Balance = await token.balanceOf(accounts[2]);
@@ -220,11 +252,11 @@ contract('ICOToken', async (accounts) => {
 
         it('should let only the owner reallocate stolen tokens', async function () {
             let token = await deployTokenContract();
-            await token.transfer(accounts[1], 1000, { from: accounts[0] });
+            await token.transfer(accounts[1], 1000, {from: accounts[0]});
 
-            await token.freezeAddress(accounts[1],{from:accounts[0]});
+            await token.freezeAddress(accounts[1], {from: accounts[0]});
 
-            await expectThrow( token.restoreFunds(accounts[1], accounts[2], 1000,{from:accounts[1]}))
+            await expectThrow(token.restoreFunds(accounts[1], accounts[2], 1000, {from: accounts[1]}))
 
             let account1Balance = await token.balanceOf(accounts[1]);
 
@@ -235,7 +267,7 @@ contract('ICOToken', async (accounts) => {
     describe('pausable', function () {
 
         it('should not be able to transfer tokens when paused', async function () {
-            let token  = await deployTokenContract();
+            let token = await deployTokenContract();
             let amount = 100;
 
             //owner(account[0]) approves to account[1] to spend the amount
@@ -243,15 +275,31 @@ contract('ICOToken', async (accounts) => {
 
             await token.pause();
 
-            await expectThrow(  token.transfer(accounts[2], amount, { from: accounts[0] }));
+            await expectThrow(token.transfer(accounts[2], amount, {from: accounts[0]}));
 
-            await expectThrow(  token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}))
+            await expectThrow(token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}))
 
             await token.unpause();
 
-            await token.transfer(accounts[2], amount, { from: accounts[0] });
+            await token.transfer(accounts[2], amount, {from: accounts[0]});
 
             await token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}); //acc1 transfers from acc0 to acc2
+
+        });
+    });
+
+    describe('ownable', function () {
+
+        it('should be able to change the owner', async function () {
+            let token = await deployTokenContract();
+
+            assert.equal(accounts[0], await token.owner());
+
+            await token.transferOwnership(accounts[1]);
+
+            assert.equal(accounts[1], await token.owner());
+
+            await expectThrow(token.pause({from: accounts[0]}));
 
         });
     });
