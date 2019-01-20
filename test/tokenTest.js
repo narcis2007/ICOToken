@@ -4,6 +4,7 @@
 'use strict';
 
 const expectThrow = require('./expectThrow.js')
+const timeTravel = require('./timeTravel');
 const BigNumber = require('bignumber.js')
 var ICOToken = artifacts.require("ICOToken");
 
@@ -300,6 +301,44 @@ contract('ICOToken', async (accounts) => {
             assert.equal(accounts[1], await token.owner());
 
             await expectThrow(token.pause({from: accounts[0]}));
+
+        });
+    });
+
+    describe('lockable', function () {
+
+        it('should be able to lock tokens for a year', async function () {
+            let token = await deployTokenContract();
+            await token.transfer(accounts[1], 1000, {from: accounts[0]});
+
+            await token.transfer(accounts[2], 500, {from: accounts[1]});
+
+            assert.equal(await token.balanceOf(accounts[1]), 500);
+            assert.equal(await token.balanceOf(accounts[2]), 500);
+
+            await expectThrow(token.lockAddressFor1Year(accounts[1], {from: accounts[1]}));
+
+            await token.lockAddressFor1Year(accounts[1]);
+
+            await expectThrow(token.approve(accounts[2], 1, {from: accounts[1]}));
+
+            await token.transfer(accounts[1], 100, {from: accounts[2]});
+
+            await expectThrow(token.transfer(accounts[2], 100, {from: accounts[1]}));
+
+            assert.equal(await token.balanceOf(accounts[1]), 600);
+            assert.equal(await token.balanceOf(accounts[2]), 400);
+
+            await timeTravel(60 * 60 * 24 * 365 + 1);
+
+            await token.transfer(accounts[2], 500, {from: accounts[1]});
+
+            assert.equal((await token.balanceOf(accounts[1])).toNumber(), 100);
+            assert.equal((await token.balanceOf(accounts[2])).toNumber(), 900);
+
+            await token.stopLockingForever();
+            await expectThrow(token.lockAddressFor1Year(accounts[1]));
+            await expectThrow(token.lockAddressFor1Year(accounts[0], {from: accounts[2]}));
 
         });
     });

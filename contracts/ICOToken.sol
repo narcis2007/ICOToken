@@ -38,11 +38,15 @@ contract ERC20 {
     uint public totalSupply;
 
     function balanceOf(address who) public view returns (uint);
+
     function allowance(address owner, address spender) public view returns (uint);
 
     function transfer(address to, uint value) public returns (bool ok);
+
     function transferFrom(address from, address to, uint value) public returns (bool ok);
+
     function approve(address spender, uint value) public returns (bool ok);
+
     event Transfer(address indexed from, address indexed to, uint value);
     event Approval(address indexed owner, address indexed spender, uint value);
 }
@@ -73,7 +77,7 @@ contract SafeMath {
 
     function safeAdd(uint a, uint b) internal pure returns (uint) {
         uint c = a + b;
-        assertThat(c>=a && c>=b);
+        assertThat(c >= a && c >= b);
         return c;
     }
 
@@ -117,7 +121,7 @@ contract StandardToken is ERC20, SafeMath {
     mapping(address => uint) balances;
 
     /* approve() allowances */
-    mapping (address => mapping (address => uint)) allowed;
+    mapping(address => mapping(address => uint)) allowed;
 
     /**
      *
@@ -126,7 +130,7 @@ contract StandardToken is ERC20, SafeMath {
      * http://vessenes.com/the-erc20-short-address-attack-explained/
      */
     modifier onlyPayloadSize(uint size) {
-        if(msg.data.length < size + 4) {
+        if (msg.data.length < size + 4) {
             revert();
         }
         _;
@@ -181,7 +185,7 @@ contract StandardToken is ERC20, SafeMath {
    * @param _addedValue The amount of tokens to increase the allowance by.
    */
     function increaseApproval(address _spender, uint _addedValue) public returns (bool) {
-        allowed[msg.sender][_spender] = safeAdd(allowed[msg.sender][_spender],_addedValue);
+        allowed[msg.sender][_spender] = safeAdd(allowed[msg.sender][_spender], _addedValue);
         emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
         return true;
     }
@@ -286,7 +290,7 @@ contract PausableToken is StandardToken, Pausable {
  */
 contract Freezable is Ownable {
 
-    mapping (address => bool) internal frozenAddresses;
+    mapping(address => bool) internal frozenAddresses;
 
     modifier ifNotFrozen() {
         require(frozenAddresses[msg.sender] == false);
@@ -365,13 +369,54 @@ contract BurnableToken is StandardToken {
     }
 }
 
-contract ICOToken is BurnableToken, AntiTheftToken, PausableToken {
+contract LockableToken is StandardToken, Ownable {
+
+    mapping(address => uint) lockedUntil;
+    bool lockingActive = true;
+
+    function lockAddressFor1Year(address who) onlyOwner public {
+        require(lockingActive, "Locking must be active!");
+
+        lockedUntil[who] = now + 365 days;
+    }
+
+    modifier isNotLocked(){
+        require(lockedUntil[msg.sender] < now);
+        _;
+    }
+
+    function stopLockingForever() onlyOwner public {
+        lockingActive = false;
+    }
+
+    function transfer(address _to, uint256 _value) public isNotLocked returns (bool) {
+        return super.transfer(_to, _value);
+    }
+
+    function transferFrom(address _from, address _to, uint256 _value) public isNotLocked returns (bool) {
+        return super.transferFrom(_from, _to, _value);
+    }
+
+    function approve(address _spender, uint256 _value) public isNotLocked returns (bool) {
+        return super.approve(_spender, _value);
+    }
+
+    function increaseApproval(address _spender, uint _addedValue) public isNotLocked returns (bool success) {
+        return super.increaseApproval(_spender, _addedValue);
+    }
+
+    function decreaseApproval(address _spender, uint _subtractedValue) public isNotLocked returns (bool success) {
+        return super.decreaseApproval(_spender, _subtractedValue);
+    }
+}
+
+contract ICOToken is BurnableToken, AntiTheftToken, PausableToken, LockableToken {
 
     constructor(string memory _name, string memory _symbol, uint _decimals, uint _max_supply) public {
         symbol = _symbol;
         name = _name;
         decimals = _decimals;
-        
+
         totalSupply = _max_supply * (10 ** _decimals);
         balances[msg.sender] = totalSupply;
         emit Transfer(address(0x0), msg.sender, totalSupply);
