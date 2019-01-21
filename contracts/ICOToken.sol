@@ -408,6 +408,10 @@ contract LockableToken is StandardToken, Ownable {
     function decreaseApproval(address _spender, uint _subtractedValue) public isNotLocked returns (bool success) {
         return super.decreaseApproval(_spender, _subtractedValue);
     }
+
+    function getLockedUntil(address who) public view returns(uint){
+        return lockedUntil[who];
+    }
 }
 
 contract ICOToken is BurnableToken, AntiTheftToken, PausableToken, LockableToken {
