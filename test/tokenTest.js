@@ -6,41 +6,42 @@
 const expectThrow = require('./expectThrow.js')
 const timeTravel = require('./timeTravel');
 const BigNumber = require('bignumber.js')
-var ICOToken = artifacts.require("ICOToken");
+var ADGZToken = artifacts.require("ADGZToken");
 
 
 async function deployTokenContract() {
-    return await ICOToken.new("Test Token", "TST", 8, 100)
+    return await ADGZToken.new()
 }
 
-contract('ICOToken', async (accounts) => {
+contract('ADGZToken', async (accounts) => {
+    const DECIMALS = 18;
 
-    const MAX_SUPPLY = new BigNumber('100').mul(new BigNumber('10').pow(8));
+    const MAX_SUPPLY = new BigNumber('2000000000').mul(new BigNumber('10').pow(DECIMALS));
 
     describe('token', function () {
 
         it('should return the correct total supply after construction', async () => {
             let token = await deployTokenContract();
             let totalSupply = await token.totalSupply()
-            assert.equal(totalSupply.toNumber(), MAX_SUPPLY)
+            assert.equal(new BigNumber(totalSupply.toString()).toString(), MAX_SUPPLY.toString())
         });
 
-        it('should have the name TEST Token', async function () {
+        it('should have the name Alpha Deal Group Tech Token', async function () {
             let token = await deployTokenContract();
             let name = await token.name()
-            assert.equal(name, "Test Token", "Test Token wasn't the name")
+            assert.equal(name, "Alpha Deal Group Tech", "Test Token wasn't the name")
         });
 
-        it('should have the symbol TST', async function () {
+        it('should have the symbol ADGZ', async function () {
             let token = await deployTokenContract();
             let symbol = await token.symbol()
-            assert.equal(symbol, "TST", "TST wasn't the symbol")
+            assert.equal(symbol, "ADGZ", "TST wasn't the symbol")
         });
 
-        it('should have 8 decimals', async function () {
+        it('should have 18 decimals', async function () {
             let token = await deployTokenContract();
             let decimals = await token.decimals()
-            assert.equal(decimals, 8, "8 wasn't the number of decimals")
+            assert.equal(decimals, DECIMALS, DECIMALS + " wasn't the number of decimals")
         });
     });
 
@@ -62,8 +63,8 @@ contract('ICOToken', async (accounts) => {
             let account0EndingBalance = await token.balanceOf(accounts[0])
             let account1EndingBalance = await token.balanceOf(accounts[1])
 
-            assert.equal(account0EndingBalance.toNumber(), account0StartingBalance.toNumber() - amount, "Balance of account 0 incorrect")
-            assert.equal(account1EndingBalance.toNumber(), account1StartingBalance.toNumber() + amount, "Balance of account 1 incorrect")
+            assert.equal((new BigNumber(account0EndingBalance.toString())).toString(), (new BigNumber(account0StartingBalance.toString())).sub(amount).toString(), "Balance of account 0 incorrect")
+            assert.equal((new BigNumber(account1EndingBalance.toString())).toString(), (new BigNumber(account1StartingBalance.toString())).add(amount).toString(), "Balance of account 1 incorrect")
         });
 
         it('should throw an error when trying to transfer more than a balance', async function () {
@@ -80,7 +81,7 @@ contract('ICOToken', async (accounts) => {
 
         it('should give the owner the maximum supply cap after deploy', async function () {
             let token = await deployTokenContract();
-            assert.equal(await token.totalSupply(), MAX_SUPPLY.toNumber())
+            assert.equal(new BigNumber((await token.totalSupply()).toString()), MAX_SUPPLY.toString())
             assert.equal(await token.balanceOf(accounts[0]), MAX_SUPPLY.toNumber())
         });
     });
@@ -265,30 +266,6 @@ contract('ICOToken', async (accounts) => {
         });
     });
 
-    describe('pausable', function () {
-
-        it('should not be able to transfer tokens when paused', async function () {
-            let token = await deployTokenContract();
-            let amount = 100;
-
-            //owner(account[0]) approves to account[1] to spend the amount
-            await token.approve(accounts[1], amount);
-
-            await token.pause();
-
-            await expectThrow(token.transfer(accounts[2], amount, {from: accounts[0]}));
-
-            await expectThrow(token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}))
-
-            await token.unpause();
-
-            await token.transfer(accounts[2], amount, {from: accounts[0]});
-
-            await token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}); //acc1 transfers from acc0 to acc2
-
-        });
-    });
-
     describe('ownable', function () {
 
         it('should be able to change the owner', async function () {
@@ -300,45 +277,7 @@ contract('ICOToken', async (accounts) => {
 
             assert.equal(accounts[1], await token.owner());
 
-            await expectThrow(token.pause({from: accounts[0]}));
-
-        });
-    });
-
-    describe('lockable', function () {
-
-        it('should be able to lock tokens for a year', async function () {
-            let token = await deployTokenContract();
-            await token.transfer(accounts[1], 1000, {from: accounts[0]});
-
-            await token.transfer(accounts[2], 500, {from: accounts[1]});
-
-            assert.equal(await token.balanceOf(accounts[1]), 500);
-            assert.equal(await token.balanceOf(accounts[2]), 500);
-
-            await expectThrow(token.lockAddressFor1Year(accounts[1], {from: accounts[1]}));
-
-            await token.lockAddressFor1Year(accounts[1]);
-
-            await expectThrow(token.approve(accounts[2], 1, {from: accounts[1]}));
-
-            await token.transfer(accounts[1], 100, {from: accounts[2]});
-
-            await expectThrow(token.transfer(accounts[2], 100, {from: accounts[1]}));
-
-            assert.equal(await token.balanceOf(accounts[1]), 600);
-            assert.equal(await token.balanceOf(accounts[2]), 400);
-
-            await timeTravel(60 * 60 * 24 * 365 + 1);
-
-            await token.transfer(accounts[2], 500, {from: accounts[1]});
-
-            assert.equal((await token.balanceOf(accounts[1])).toNumber(), 100);
-            assert.equal((await token.balanceOf(accounts[2])).toNumber(), 900);
-
-            await token.stopLockingForever();
-            await expectThrow(token.lockAddressFor1Year(accounts[1]));
-            await expectThrow(token.lockAddressFor1Year(accounts[0], {from: accounts[2]}));
+            await expectThrow(token.freezeAddress(accounts[3],{from: accounts[0]}));
 
         });
     });
