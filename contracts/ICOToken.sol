@@ -284,6 +284,52 @@ contract PausableToken is StandardToken, Pausable {
     }
 }
 
+
+contract LockableToken is StandardToken, Ownable { // TODO: see if it's better to have a locking agent sepparated from the owner
+
+    mapping(address => uint) lockedUntil;
+    bool lockingActive = true;
+
+    function lockAddressUntil(address who, uint timestamp) onlyOwner public {
+        require(lockingActive, "Locking must be active!");
+
+        lockedUntil[who] = timestamp;
+    }
+
+    modifier isNotLocked(){
+        require(lockedUntil[msg.sender] < now);
+        _;
+    }
+
+    function stopLockingForever() onlyOwner public {
+        lockingActive = false;
+    }
+
+    function transfer(address _to, uint256 _value) public isNotLocked returns (bool) {
+        return super.transfer(_to, _value);
+    }
+
+    function transferFrom(address _from, address _to, uint256 _value) public isNotLocked returns (bool) {
+        return super.transferFrom(_from, _to, _value);
+    }
+
+    function approve(address _spender, uint256 _value) public isNotLocked returns (bool) {
+        return super.approve(_spender, _value);
+    }
+
+    function increaseApproval(address _spender, uint _addedValue) public isNotLocked returns (bool success) {
+        return super.increaseApproval(_spender, _addedValue);
+    }
+
+    function decreaseApproval(address _spender, uint _subtractedValue) public isNotLocked returns (bool success) {
+        return super.decreaseApproval(_spender, _subtractedValue);
+    }
+
+    function getLockedUntil(address who) public view returns(uint){
+        return lockedUntil[who];
+    }
+}
+
 /**
  * @title Freezable
  * @dev Base contract which allows children to freeze the operations from a certain address in case of an emergency.
@@ -352,69 +398,7 @@ contract AntiTheftToken is FreezableToken {
     }
 }
 
-contract BurnableToken is StandardToken {
-
-    /** How many tokens we burned */
-    event Burned(address burner, uint burnedAmount);
-
-    /**
-     * Burn extra tokens from a balance.
-     *
-     */
-    function burn(uint burnAmount) public {
-        address burner = msg.sender;
-        balances[burner] = safeSub(balances[burner], burnAmount);
-        totalSupply = safeSub(totalSupply, burnAmount);
-        emit Burned(burner, burnAmount);
-    }
-}
-
-contract LockableToken is StandardToken, Ownable {
-
-    mapping(address => uint) lockedUntil;
-    bool lockingActive = true;
-
-    function lockAddressFor1Year(address who) onlyOwner public {
-        require(lockingActive, "Locking must be active!");
-
-        lockedUntil[who] = now + 365 days;
-    }
-
-    modifier isNotLocked(){
-        require(lockedUntil[msg.sender] < now);
-        _;
-    }
-
-    function stopLockingForever() onlyOwner public {
-        lockingActive = false;
-    }
-
-    function transfer(address _to, uint256 _value) public isNotLocked returns (bool) {
-        return super.transfer(_to, _value);
-    }
-
-    function transferFrom(address _from, address _to, uint256 _value) public isNotLocked returns (bool) {
-        return super.transferFrom(_from, _to, _value);
-    }
-
-    function approve(address _spender, uint256 _value) public isNotLocked returns (bool) {
-        return super.approve(_spender, _value);
-    }
-
-    function increaseApproval(address _spender, uint _addedValue) public isNotLocked returns (bool success) {
-        return super.increaseApproval(_spender, _addedValue);
-    }
-
-    function decreaseApproval(address _spender, uint _subtractedValue) public isNotLocked returns (bool success) {
-        return super.decreaseApproval(_spender, _subtractedValue);
-    }
-
-    function getLockedUntil(address who) public view returns(uint){
-        return lockedUntil[who];
-    }
-}
-
-contract ICOToken is BurnableToken, AntiTheftToken, PausableToken, LockableToken {
+contract LohnToken is PausableToken, LockableToken, AntiTheftToken {
 
     constructor(string memory _name, string memory _symbol, uint _decimals, uint _max_supply) public {
         symbol = _symbol;

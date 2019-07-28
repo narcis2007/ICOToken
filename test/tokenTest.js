@@ -6,41 +6,45 @@
 const expectThrow = require('./expectThrow.js')
 const timeTravel = require('./timeTravel');
 const BigNumber = require('bignumber.js')
-var ICOToken = artifacts.require("ICOToken");
+var LohnToken = artifacts.require("LohnToken");
 
+const NAME = "Lohn";
+const SYMBOL = "LOHN";
+var DECIMALS = 8;
+const SUPPLY = 100;
 
 async function deployTokenContract() {
-    return await ICOToken.new("Test Token", "TST", 8, 100)
+    return await LohnToken.new(NAME, SYMBOL, DECIMALS, SUPPLY)
 }
 
-contract('ICOToken', async (accounts) => {
+contract('LohnToken', async (accounts) => {
 
-    const MAX_SUPPLY = new BigNumber('100').mul(new BigNumber('10').pow(8));
+    const TOTAL_SUPPLY_WITH_DECIMALS = new BigNumber(SUPPLY).mul(new BigNumber('10').pow(DECIMALS));
 
     describe('token', function () {
 
         it('should return the correct total supply after construction', async () => {
             let token = await deployTokenContract();
             let totalSupply = await token.totalSupply()
-            assert.equal(totalSupply.toNumber(), MAX_SUPPLY)
+            assert.equal(totalSupply.toNumber(), TOTAL_SUPPLY_WITH_DECIMALS)
         });
 
-        it('should have the name TEST Token', async function () {
+        it('should have the name', async function () {
             let token = await deployTokenContract();
             let name = await token.name()
-            assert.equal(name, "Test Token", "Test Token wasn't the name")
+            assert.equal(name, "Lohn", "wrong name")
         });
 
-        it('should have the symbol TST', async function () {
+        it('should have the symbol', async function () {
             let token = await deployTokenContract();
             let symbol = await token.symbol()
-            assert.equal(symbol, "TST", "TST wasn't the symbol")
+            assert.equal(symbol, SYMBOL, "wrong symbol")
         });
 
-        it('should have 8 decimals', async function () {
+        it('should have the right decimals', async function () {
             let token = await deployTokenContract();
             let decimals = await token.decimals()
-            assert.equal(decimals, 8, "8 wasn't the number of decimals")
+            assert.equal(decimals, DECIMALS, "wrong decimals")
         });
     });
 
@@ -80,8 +84,8 @@ contract('ICOToken', async (accounts) => {
 
         it('should give the owner the maximum supply cap after deploy', async function () {
             let token = await deployTokenContract();
-            assert.equal(await token.totalSupply(), MAX_SUPPLY.toNumber())
-            assert.equal(await token.balanceOf(accounts[0]), MAX_SUPPLY.toNumber())
+            assert.equal(await token.totalSupply(), TOTAL_SUPPLY_WITH_DECIMALS.toNumber())
+            assert.equal(await token.balanceOf(accounts[0]), TOTAL_SUPPLY_WITH_DECIMALS.toNumber())
         });
     });
 
@@ -176,34 +180,6 @@ contract('ICOToken', async (accounts) => {
             assert.equal(amount, await token.allowance(accounts[0], accounts[1]));
 
             await expectThrow(token.approve(accounts[1], amount + 1));
-        });
-    });
-
-    describe('burnable', function () {
-
-        it('owner should be able to burn tokens', async function () {
-            let token = await deployTokenContract();
-            let balance = await token.balanceOf(accounts[0]);
-            let totalSupply = await token.totalSupply();
-            let luckys_burned_amount = 100;
-            let expectedTotalSupply = totalSupply - luckys_burned_amount;
-            let expectedBalance = balance - luckys_burned_amount
-
-            const {logs} = await token.burn(luckys_burned_amount);
-            let final_supply = await token.totalSupply();
-            let final_balance = await token.balanceOf(accounts[0]);
-            assert.equal(expectedTotalSupply, final_supply, "Supply after burn do not fit.");
-            assert.equal(expectedBalance, final_balance, "Supply after burn do not fit.");
-
-            const event = logs.find(e => e.event === 'Burned');
-            assert.notEqual(event, undefined, "Event Burned not fired!")
-        });
-
-        it('Can not burn more tokens than your balance', async function () {
-            let token = await deployTokenContract();
-            let totalSupply = await token.totalSupply();
-            let luckys_burnable_amount = totalSupply + 1;
-            await expectThrow(token.burn(luckys_burnable_amount));
         });
     });
 
@@ -315,10 +291,11 @@ contract('ICOToken', async (accounts) => {
 
             assert.equal(await token.balanceOf(accounts[1]), 500);
             assert.equal(await token.balanceOf(accounts[2]), 500);
+            var timestampNextYear = Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 365);
 
-            await expectThrow(token.lockAddressFor1Year(accounts[1], {from: accounts[1]}));
+            await expectThrow(token.lockAddressUntil(accounts[1], timestampNextYear, {from: accounts[1]}));
 
-            await token.lockAddressFor1Year(accounts[1]);
+            await token.lockAddressUntil(accounts[1], timestampNextYear);
 
             await expectThrow(token.approve(accounts[2], 1, {from: accounts[1]}));
 
@@ -337,8 +314,8 @@ contract('ICOToken', async (accounts) => {
             assert.equal((await token.balanceOf(accounts[2])).toNumber(), 900);
 
             await token.stopLockingForever();
-            await expectThrow(token.lockAddressFor1Year(accounts[1]));
-            await expectThrow(token.lockAddressFor1Year(accounts[0], {from: accounts[2]}));
+            await expectThrow(token.lockAddressUntil(accounts[1], timestampNextYear));
+            await expectThrow(token.lockAddressUntil(accounts[0], timestampNextYear, {from: accounts[2]}));
 
         });
     });
