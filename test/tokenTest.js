@@ -1,22 +1,22 @@
 /**
- * Created by Narcis2007 on 12.05.2018.
+ * Created by Narcis2007.
  */
 'use strict';
 
 const expectThrow = require('./expectThrow.js')
 const timeTravel = require('./timeTravel');
 const BigNumber = require('bignumber.js')
-var ADGZToken = artifacts.require("ADGZToken");
+var HelussToken = artifacts.require("HelussToken");
 
 
 async function deployTokenContract() {
-    return await ADGZToken.new()
+    return await HelussToken.new()
 }
 
-contract('ADGZToken', async (accounts) => {
+contract('HelussToken', async (accounts) => {
     const DECIMALS = 18;
 
-    const MAX_SUPPLY = new BigNumber('2000000000').mul(new BigNumber('10').pow(DECIMALS));
+    const MAX_SUPPLY = new BigNumber('600000000').mul(new BigNumber('10').pow(DECIMALS));
 
     describe('token', function () {
 
@@ -26,16 +26,16 @@ contract('ADGZToken', async (accounts) => {
             assert.equal(new BigNumber(totalSupply.toString()).toString(), MAX_SUPPLY.toString())
         });
 
-        it('should have the name Alpha Deal Group Tech Token', async function () {
+        it('should have the name Heluss Token', async function () {
             let token = await deployTokenContract();
             let name = await token.name()
-            assert.equal(name, "Alpha Deal Group Tech", "Test Token wasn't the name")
+            assert.equal(name, "Heluss Token", "Heluss Token wasn't the name")
         });
 
-        it('should have the symbol ADGZ', async function () {
+        it('should have the symbol HUT', async function () {
             let token = await deployTokenContract();
             let symbol = await token.symbol()
-            assert.equal(symbol, "ADGZ", "TST wasn't the symbol")
+            assert.equal(symbol, "HUT", "HUT wasn't the symbol")
         });
 
         it('should have 18 decimals', async function () {

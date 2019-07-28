@@ -1,8 +1,8 @@
-var ADGZToken = artifacts.require("ADGZToken");
+var HelussToken = artifacts.require("HelussToken");
 
 module.exports = function(deployer, network, accounts) {
 
-    return deployer.deploy(ADGZToken).then(() => {
-            return ADGZToken.deployed()
+    return deployer.deploy(HelussToken).then(() => {
+            return HelussToken.deployed()
     })
 };

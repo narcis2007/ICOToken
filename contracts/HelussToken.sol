@@ -298,14 +298,14 @@ contract BurnableToken is StandardToken {
     }
 }
 
-contract ADGZToken is BurnableToken, AntiTheftToken {
+contract HelussToken is BurnableToken, AntiTheftToken {
 
     constructor() public {
-        symbol = "ADGZ";
-        name = "Alpha Deal Group Tech";
+        symbol = "HUT";
+        name = "Heluss Token";
         decimals = 18;
 
-        totalSupply = 2 * (10 ** (decimals + 9));
+        totalSupply = 6 * (10 ** (decimals + 8));
         balances[msg.sender] = totalSupply;
         emit Transfer(address(0x0), msg.sender, totalSupply);
     }
