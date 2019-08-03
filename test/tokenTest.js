@@ -263,6 +263,30 @@ contract('LohnToken', async (accounts) => {
             await token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}); //acc1 transfers from acc0 to acc2
 
         });
+
+        it('should be able to transfer tokens when paused and whitelisted', async function () {
+            let token = await deployTokenContract();
+            let amount = 10;
+
+            //owner(account[0]) approves to account[1] to spend the amount
+            await token.approve(accounts[1], amount);
+
+            await token.whitelistForTransfer(accounts[0], true);
+
+            await token.pause();
+
+            await token.transfer(accounts[2], amount / 2, {from: accounts[0]});
+
+            await expectThrow(token.transfer(accounts[1], amount / 2, {from: accounts[2]}));
+
+            await token.unpause();
+
+            await token.transfer(accounts[2], amount, {from: accounts[0]});
+
+            await token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}); //acc1 transfers from acc0 to acc2
+
+
+        });
     });
 
     describe('ownable', function () {

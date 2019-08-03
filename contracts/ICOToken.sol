@@ -222,13 +222,18 @@ contract Pausable is Ownable {
     event Unpause();
 
     bool public paused = false;
+    mapping(address => bool) public transferWhitelisted;
+
+    function whitelistForTransfer(address who, bool whitelisted) public onlyOwner {
+        transferWhitelisted[who] = whitelisted;
+    }
 
 
     /**
      * @dev Modifier to make a function callable only when the contract is not paused.
      */
     modifier whenNotPaused() {
-        require(!paused);
+        require(!(paused && transferWhitelisted[msg.sender] == false) );
         _;
     }
 
@@ -412,23 +417,25 @@ contract LohnToken is PausableToken, LockableToken, AntiTheftToken {
         emit Transfer(address(0x0), msg.sender, totalSupply);
     }
 
+
+    // TODO: function for lock and transfer
     function distributeTokens() public {
         require(distributedToTeam == false);
 
-        uint tokensForTeamMember = (10 ** 6) * (10 ** _decimals);
-        transfer("0x841996929D83Acbb6F995B434625d7358a60e9ff", tokensForTeamMember); // Vasile Lupu
-        transfer("0xfFe2Bf4AC5a63f3F4B49D5B7A2bA1a510A21fa25", tokensForTeamMember); // Catalin Iordache
-        transfer("0x9608E4Af209FC56DF2383674C155E6A69Ff0D4E8", tokensForTeamMember); // Irina Masnita
-        transfer("0xb89E031d991e1F891A62540cD8731d6a7478bb99", tokensForTeamMember); // Daniela Ghitoiu
-        transfer("0xCf6f4181995A358478Fb0FFe9d34a59e0Cd7cD42", tokensForTeamMember); // Andrei Danciu
-        transfer("0x371976aA9Ed7ca3216Ff1e4C6047cd0FB97d7D16", tokensForTeamMember); // Raphael
-        transfer("0x257c190a914b4194bbe9acfeadbafb7012c643f6", tokensForTeamMember); // Ovidiu Stancalie
-        transfer("0x03749Becb794AA3791ED0f4F87db6651E1D37F8b", tokensForTeamMember); // Oana Taroiu
-        transfer("0xb229b7384c8569c1d39e0ed6ec7020f7b118fd66", tokensForTeamMember); // Sorin
-        transfer("0x6Ca8cc722Cc7478c90B1765C6a080c3206931668", tokensForTeamMember); // Hakan
-
-        transfer("0x6A11e851ab9b75AdfF092a540718BDE0Cf81c7cD", tokensForTeamMember / 2); // Sean Brizendine - advisor
-        transfer("0x61b0615e69a713c846A58bDA249b6fcD0ceA565f", tokensForTeamMember / 2); // Hamza Khan - advisor
+        uint tokensForTeamMember = (10 ** 6) * (10 ** decimals);
+        transfer(0x841996929D83Acbb6F995B434625d7358a60e9ff, tokensForTeamMember); // Vasile Lupu
+        transfer(0xfFe2Bf4AC5a63f3F4B49D5B7A2bA1a510A21fa25, tokensForTeamMember); // Catalin Iordache
+        transfer(0x9608E4Af209FC56DF2383674C155E6A69Ff0D4E8, tokensForTeamMember); // Irina Masnita
+        transfer(0xb89E031d991e1F891A62540cD8731d6a7478bb99, tokensForTeamMember); // Daniela Ghitoiu
+        transfer(0xCf6f4181995A358478Fb0FFe9d34a59e0Cd7cD42, tokensForTeamMember); // Andrei Danciu
+        transfer(0x371976aA9Ed7ca3216Ff1e4C6047cd0FB97d7D16, tokensForTeamMember); // Raphael
+        transfer(0x257c190A914b4194bbE9aCfEAdBafb7012c643f6, tokensForTeamMember); // Ovidiu Stancalie
+        transfer(0x03749Becb794AA3791ED0f4F87db6651E1D37F8b, tokensForTeamMember); // Oana Taroiu
+        transfer(0xB229b7384c8569c1d39E0eD6ec7020F7b118fd66, tokensForTeamMember); // Sorin
+        transfer(0x6Ca8cc722Cc7478c90B1765C6a080c3206931668, tokensForTeamMember); // Hakan
+        transfer(0xA5B0dBdD4a25a017d4A18B0d9223f9a6e655bB75, tokensForTeamMember); // Popa Laurentiu
+        transfer(0x6A11e851ab9b75AdfF092a540718BDE0Cf81c7cD, tokensForTeamMember / 2); // Sean Brizendine - advisor
+        transfer(0x61b0615e69a713c846A58bDA249b6fcD0ceA565f, tokensForTeamMember / 2); // Hamza Khan - advisor
 
 
 
