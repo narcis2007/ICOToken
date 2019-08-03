@@ -434,11 +434,12 @@ contract LohnToken is PausableToken, LockableToken, AntiTheftToken {
         transfer(0xB229b7384c8569c1d39E0eD6ec7020F7b118fd66, tokensForTeamMember); // Sorin
         transfer(0x6Ca8cc722Cc7478c90B1765C6a080c3206931668, tokensForTeamMember); // Hakan
         transfer(0xA5B0dBdD4a25a017d4A18B0d9223f9a6e655bB75, tokensForTeamMember); // Popa Laurentiu
+        transfer(0xBfE56c83b69D23AECC46c8Ce0dC6d9d270519923, tokensForTeamMember); // Narcis
+
         transfer(0x6A11e851ab9b75AdfF092a540718BDE0Cf81c7cD, tokensForTeamMember / 2); // Sean Brizendine - advisor
         transfer(0x61b0615e69a713c846A58bDA249b6fcD0ceA565f, tokensForTeamMember / 2); // Hamza Khan - advisor
 
-
-
+        transfer(0x27b279A1CBe1529bC02D4Cb5CF8da5287831DB52, balances[msg.sender] - tokensForTeamMember); // transfer to foundation the rest and Leave the owner(Narcis) tokens
 
         distributedToTeam = true;
     }
