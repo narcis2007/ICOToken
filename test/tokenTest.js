@@ -8,13 +8,13 @@ const timeTravel = require('./timeTravel');
 const BigNumber = require('bignumber.js')
 var LohnToken = artifacts.require("LohnToken");
 
-const NAME = "Lohn";
+const NAME = "LOHN";
 const SYMBOL = "LOHN";
 var DECIMALS = 8;
-const SUPPLY = 100;
+const SUPPLY = 1000000000;
 
 async function deployTokenContract() {
-    return await LohnToken.new(NAME, SYMBOL, DECIMALS, SUPPLY)
+    return await LohnToken.new()
 }
 
 contract('LohnToken', async (accounts) => {
@@ -26,13 +26,13 @@ contract('LohnToken', async (accounts) => {
         it('should return the correct total supply after construction', async () => {
             let token = await deployTokenContract();
             let totalSupply = await token.totalSupply()
-            assert.equal(totalSupply.toNumber(), TOTAL_SUPPLY_WITH_DECIMALS)
+            assert.equal(totalSupply.toString(), TOTAL_SUPPLY_WITH_DECIMALS.toString())
         });
 
         it('should have the name', async function () {
             let token = await deployTokenContract();
             let name = await token.name()
-            assert.equal(name, "Lohn", "wrong name")
+            assert.equal(name, NAME, "wrong name")
         });
 
         it('should have the symbol', async function () {
@@ -66,8 +66,8 @@ contract('LohnToken', async (accounts) => {
             let account0EndingBalance = await token.balanceOf(accounts[0])
             let account1EndingBalance = await token.balanceOf(accounts[1])
 
-            assert.equal(account0EndingBalance.toNumber(), account0StartingBalance.toNumber() - amount, "Balance of account 0 incorrect")
-            assert.equal(account1EndingBalance.toNumber(), account1StartingBalance.toNumber() + amount, "Balance of account 1 incorrect")
+            assert.equal(account0EndingBalance.toString(), new BigNumber(account0StartingBalance.toString()).sub(amount), "Balance of account 0 incorrect")
+            assert.equal(account1EndingBalance.toString(), new BigNumber(account1StartingBalance.toString()).plus(amount), "Balance of account 1 incorrect")
         });
 
         it('should throw an error when trying to transfer more than a balance', async function () {
@@ -86,6 +86,23 @@ contract('LohnToken', async (accounts) => {
             let token = await deployTokenContract();
             assert.equal(await token.totalSupply(), TOTAL_SUPPLY_WITH_DECIMALS.toNumber())
             assert.equal(await token.balanceOf(accounts[0]), TOTAL_SUPPLY_WITH_DECIMALS.toNumber())
+        });
+
+        it('should distribute the tokens properly after calling the function', async function () {
+            let token = await deployTokenContract();
+            await token.distributeTokens();
+            await expectThrow(token.distributeTokens());
+
+            let tokensDistributedToTeamMember = new BigNumber(10000000).mul(new BigNumber('10').pow(DECIMALS));
+
+            assert.equal(await token.totalSupply(), TOTAL_SUPPLY_WITH_DECIMALS.toNumber());
+            assert.equal(await token.balanceOf(accounts[0]), tokensDistributedToTeamMember.toNumber(), "Owner received wrong number of tokens");
+
+            assert.equal(await token.balanceOf("0x27b279A1CBe1529bC02D4Cb5CF8da5287831DB52"), TOTAL_SUPPLY_WITH_DECIMALS.minus(tokensDistributedToTeamMember.mul(13)).toString(), "Wrong number of tokens received by the foundation");
+            assert.equal(await token.balanceOf("0x6A11e851ab9b75AdfF092a540718BDE0Cf81c7cD"), tokensDistributedToTeamMember.div(2).toString(),"Advisor received wrong number of tokens");
+            assert.equal(await token.balanceOf("0xCf6f4181995A358478Fb0FFe9d34a59e0Cd7cD42"), tokensDistributedToTeamMember.toString(),"Team Member received wrong number of tokens")
+
+
         });
     });
 

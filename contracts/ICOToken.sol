@@ -123,20 +123,7 @@ contract StandardToken is ERC20, SafeMath {
     /* approve() allowances */
     mapping(address => mapping(address => uint)) allowed;
 
-    /**
-     *
-     * Fix for the ERC20 short address attack
-     *
-     * http://vessenes.com/the-erc20-short-address-attack-explained/
-     */
-    modifier onlyPayloadSize(uint size) {
-        if (msg.data.length < size + 4) {
-            revert();
-        }
-        _;
-    }
-
-    function transfer(address _to, uint _value) onlyPayloadSize(2 * 32) public returns (bool success) {
+    function transfer(address _to, uint _value) public returns (bool success) {
         balances[msg.sender] = safeSub(balances[msg.sender], _value);
         balances[_to] = safeAdd(balances[_to], _value);
         emit Transfer(msg.sender, _to, _value);
@@ -407,12 +394,12 @@ contract LohnToken is PausableToken, LockableToken, AntiTheftToken {
 
     bool distributedToTeam = false;
 
-    constructor(string memory _name, string memory _symbol, uint _decimals, uint _max_supply) public {
-        symbol = _symbol;
-        name = _name;
-        decimals = _decimals;
+    constructor() public {
+        symbol = "LOHN";
+        name = "LOHN";
+        decimals = 8;
 
-        totalSupply = _max_supply * (10 ** _decimals);
+        totalSupply = (10 ** (9 + decimals));
         balances[msg.sender] = totalSupply;
         emit Transfer(address(0x0), msg.sender, totalSupply);
     }
@@ -422,7 +409,7 @@ contract LohnToken is PausableToken, LockableToken, AntiTheftToken {
     function distributeTokens() public {
         require(distributedToTeam == false);
 
-        uint tokensForTeamMember = (10 ** 6) * (10 ** decimals);
+        uint tokensForTeamMember = (10 ** (7 + decimals));
         transfer(0x841996929D83Acbb6F995B434625d7358a60e9ff, tokensForTeamMember); // Vasile Lupu
         transfer(0xfFe2Bf4AC5a63f3F4B49D5B7A2bA1a510A21fa25, tokensForTeamMember); // Catalin Iordache
         transfer(0x9608E4Af209FC56DF2383674C155E6A69Ff0D4E8, tokensForTeamMember); // Irina Masnita
@@ -434,7 +421,6 @@ contract LohnToken is PausableToken, LockableToken, AntiTheftToken {
         transfer(0xB229b7384c8569c1d39E0eD6ec7020F7b118fd66, tokensForTeamMember); // Sorin
         transfer(0x6Ca8cc722Cc7478c90B1765C6a080c3206931668, tokensForTeamMember); // Hakan
         transfer(0xA5B0dBdD4a25a017d4A18B0d9223f9a6e655bB75, tokensForTeamMember); // Popa Laurentiu
-        transfer(0xBfE56c83b69D23AECC46c8Ce0dC6d9d270519923, tokensForTeamMember); // Narcis
 
         transfer(0x6A11e851ab9b75AdfF092a540718BDE0Cf81c7cD, tokensForTeamMember / 2); // Sean Brizendine - advisor
         transfer(0x61b0615e69a713c846A58bDA249b6fcD0ceA565f, tokensForTeamMember / 2); // Hamza Khan - advisor
