@@ -418,7 +418,7 @@ contract LohnToken is PausableToken, LockableToken, AntiTheftToken {
         transfer(0x371976aA9Ed7ca3216Ff1e4C6047cd0FB97d7D16, tokensForTeamMember); // Raphael
         transfer(0x257c190A914b4194bbE9aCfEAdBafb7012c643f6, tokensForTeamMember); // Ovidiu Stancalie
         transfer(0x03749Becb794AA3791ED0f4F87db6651E1D37F8b, tokensForTeamMember); // Oana Taroiu
-        transfer(0xB229b7384c8569c1d39E0eD6ec7020F7b118fd66, tokensForTeamMember); // Sorin
+        transfer(0x4984c73294aEB56D6a21B49f8156DE6DFf7FE215, tokensForTeamMember); // Sorin
         transfer(0x6Ca8cc722Cc7478c90B1765C6a080c3206931668, tokensForTeamMember); // Hakan
         transfer(0xA5B0dBdD4a25a017d4A18B0d9223f9a6e655bB75, tokensForTeamMember); // Popa Laurentiu
 
