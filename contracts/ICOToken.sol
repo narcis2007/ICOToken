@@ -431,3 +431,4 @@ contract LohnToken is PausableToken, LockableToken, AntiTheftToken {
     }
 
 }
+
