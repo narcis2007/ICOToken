@@ -6,18 +6,18 @@
 const expectThrow = require('./expectThrow.js')
 const timeTravel = require('./timeTravel');
 const BigNumber = require('bignumber.js')
-var LohnToken = artifacts.require("LohnToken");
+var BeerPointsToken = artifacts.require("BeerPointsToken");
 
-const NAME = "LOHN";
-const SYMBOL = "LOHN";
+const NAME = "Beer Points";
+const SYMBOL = "BP";
 var DECIMALS = 8;
 const SUPPLY = 1000000000;
 
 async function deployTokenContract() {
-    return await LohnToken.new()
+    return await BeerPointsToken.new()
 }
 
-contract('LohnToken', async (accounts) => {
+contract('BeerPointsToken', async (accounts) => {
 
     const TOTAL_SUPPLY_WITH_DECIMALS = new BigNumber(SUPPLY).mul(new BigNumber('10').pow(DECIMALS));
 
@@ -86,23 +86,6 @@ contract('LohnToken', async (accounts) => {
             let token = await deployTokenContract();
             assert.equal(await token.totalSupply(), TOTAL_SUPPLY_WITH_DECIMALS.toNumber())
             assert.equal(await token.balanceOf(accounts[0]), TOTAL_SUPPLY_WITH_DECIMALS.toNumber())
-        });
-
-        it('should distribute the tokens properly after calling the function', async function () {
-            let token = await deployTokenContract();
-            await token.distributeTokens();
-            await expectThrow(token.distributeTokens());
-
-            let tokensDistributedToTeamMember = new BigNumber(10000000).mul(new BigNumber('10').pow(DECIMALS));
-
-            assert.equal(await token.totalSupply(), TOTAL_SUPPLY_WITH_DECIMALS.toNumber());
-            assert.equal(await token.balanceOf(accounts[0]), tokensDistributedToTeamMember.toNumber(), "Owner received wrong number of tokens");
-
-            assert.equal(await token.balanceOf("0x27b279A1CBe1529bC02D4Cb5CF8da5287831DB52"), TOTAL_SUPPLY_WITH_DECIMALS.minus(tokensDistributedToTeamMember.mul(13)).toString(), "Wrong number of tokens received by the foundation");
-            assert.equal(await token.balanceOf("0x6A11e851ab9b75AdfF092a540718BDE0Cf81c7cD"), tokensDistributedToTeamMember.div(2).toString(),"Advisor received wrong number of tokens");
-            assert.equal(await token.balanceOf("0xCf6f4181995A358478Fb0FFe9d34a59e0Cd7cD42"), tokensDistributedToTeamMember.toString(),"Team Member received wrong number of tokens")
-
-
         });
     });
 
@@ -258,51 +241,31 @@ contract('LohnToken', async (accounts) => {
         });
     });
 
-    describe('pausable', function () {
+    describe('burnable', function () {
 
-        it('should not be able to transfer tokens when paused', async function () {
+        it('owner should be able to burn tokens', async function () {
             let token = await deployTokenContract();
-            let amount = 100;
+            let balance = await token.balanceOf(accounts[0]);
+            let totalSupply = await token.totalSupply();
+            let luckys_burned_amount = 100;
+            let expectedTotalSupply = totalSupply - luckys_burned_amount;
+            let expectedBalance = balance - luckys_burned_amount
 
-            //owner(account[0]) approves to account[1] to spend the amount
-            await token.approve(accounts[1], amount);
+            const {logs} = await token.burn(luckys_burned_amount);
+            let final_supply = await token.totalSupply();
+            let final_balance = await token.balanceOf(accounts[0]);
+            assert.equal(expectedTotalSupply, final_supply, "Supply after burn do not fit.");
+            assert.equal(expectedBalance, final_balance, "Supply after burn do not fit.");
 
-            await token.pause();
-
-            await expectThrow(token.transfer(accounts[2], amount, {from: accounts[0]}));
-
-            await expectThrow(token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}))
-
-            await token.unpause();
-
-            await token.transfer(accounts[2], amount, {from: accounts[0]});
-
-            await token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}); //acc1 transfers from acc0 to acc2
-
+            const event = logs.find(e => e.event === 'Burned');
+            assert.notEqual(event, undefined, "Event Burned not fired!")
         });
 
-        it('should be able to transfer tokens when paused and whitelisted', async function () {
+        it('Can not burn more tokens than your balance', async function () {
             let token = await deployTokenContract();
-            let amount = 10;
-
-            //owner(account[0]) approves to account[1] to spend the amount
-            await token.approve(accounts[1], amount);
-
-            await token.whitelistForTransfer(accounts[0], true);
-
-            await token.pause();
-
-            await token.transfer(accounts[2], amount / 2, {from: accounts[0]});
-
-            await expectThrow(token.transfer(accounts[1], amount / 2, {from: accounts[2]}));
-
-            await token.unpause();
-
-            await token.transfer(accounts[2], amount, {from: accounts[0]});
-
-            await token.transferFrom(accounts[0], accounts[2], amount, {from: accounts[1]}); //acc1 transfers from acc0 to acc2
-
-
+            let totalSupply = await token.totalSupply();
+            let luckys_burnable_amount = totalSupply + 1;
+            await expectThrow(token.burn(luckys_burnable_amount));
         });
     });
 
@@ -316,47 +279,6 @@ contract('LohnToken', async (accounts) => {
             await token.transferOwnership(accounts[1]);
 
             assert.equal(accounts[1], await token.owner());
-
-            await expectThrow(token.pause({from: accounts[0]}));
-
-        });
-    });
-
-    describe('lockable', function () {
-
-        it('should be able to lock tokens for a year', async function () {
-            let token = await deployTokenContract();
-            await token.transfer(accounts[1], 1000, {from: accounts[0]});
-
-            await token.transfer(accounts[2], 500, {from: accounts[1]});
-
-            assert.equal(await token.balanceOf(accounts[1]), 500);
-            assert.equal(await token.balanceOf(accounts[2]), 500);
-            var timestampNextYear = Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 365);
-
-            await expectThrow(token.lockAddressUntil(accounts[1], timestampNextYear, {from: accounts[1]}));
-
-            await token.lockAddressUntil(accounts[1], timestampNextYear);
-
-            await expectThrow(token.approve(accounts[2], 1, {from: accounts[1]}));
-
-            await token.transfer(accounts[1], 100, {from: accounts[2]});
-
-            await expectThrow(token.transfer(accounts[2], 100, {from: accounts[1]}));
-
-            assert.equal(await token.balanceOf(accounts[1]), 600);
-            assert.equal(await token.balanceOf(accounts[2]), 400);
-
-            await timeTravel(60 * 60 * 24 * 365 + 1);
-
-            await token.transfer(accounts[2], 500, {from: accounts[1]});
-
-            assert.equal((await token.balanceOf(accounts[1])).toNumber(), 100);
-            assert.equal((await token.balanceOf(accounts[2])).toNumber(), 900);
-
-            await token.stopLockingForever();
-            await expectThrow(token.lockAddressUntil(accounts[1], timestampNextYear));
-            await expectThrow(token.lockAddressUntil(accounts[0], timestampNextYear, {from: accounts[2]}));
 
         });
     });

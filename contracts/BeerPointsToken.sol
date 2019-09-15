@@ -200,125 +200,20 @@ contract StandardToken is ERC20, SafeMath {
 
 }
 
-/**
- * @title Pausable
- * @dev Base contract which allows children to implement an emergency stop mechanism.
- */
-contract Pausable is Ownable {
-    event Pause();
-    event Unpause();
+contract BurnableToken is StandardToken {
 
-    bool public paused = false;
-    mapping(address => bool) public transferWhitelisted;
-
-    function whitelistForTransfer(address who, bool whitelisted) public onlyOwner {
-        transferWhitelisted[who] = whitelisted;
-    }
-
+    /** How many tokens we burned */
+    event Burned(address burner, uint burnedAmount);
 
     /**
-     * @dev Modifier to make a function callable only when the contract is not paused.
+     * Burn extra tokens from a balance.
+     *
      */
-    modifier whenNotPaused() {
-        require(!(paused && transferWhitelisted[msg.sender] == false) );
-        _;
-    }
-
-    /**
-     * @dev Modifier to make a function callable only when the contract is paused.
-     */
-    modifier whenPaused() {
-        require(paused);
-        _;
-    }
-
-    /**
-     * @dev called by the owner to pause, triggers stopped state
-     */
-    function pause() onlyOwner whenNotPaused public {
-        paused = true;
-        emit Pause();
-    }
-
-    /**
-     * @dev called by the owner to unpause, returns to normal state
-     */
-    function unpause() onlyOwner whenPaused public {
-        paused = false;
-        emit Unpause();
-    }
-}
-
-/**
- * @title Pausable token
- * @dev StandardToken modified with pausable transfers.
- **/
-contract PausableToken is StandardToken, Pausable {
-
-    function transfer(address _to, uint256 _value) public whenNotPaused returns (bool) {
-        return super.transfer(_to, _value);
-    }
-
-    function transferFrom(address _from, address _to, uint256 _value) public whenNotPaused returns (bool) {
-        return super.transferFrom(_from, _to, _value);
-    }
-
-    function approve(address _spender, uint256 _value) public whenNotPaused returns (bool) {
-        return super.approve(_spender, _value);
-    }
-
-    function increaseApproval(address _spender, uint _addedValue) public whenNotPaused returns (bool success) {
-        return super.increaseApproval(_spender, _addedValue);
-    }
-
-    function decreaseApproval(address _spender, uint _subtractedValue) public whenNotPaused returns (bool success) {
-        return super.decreaseApproval(_spender, _subtractedValue);
-    }
-}
-
-
-contract LockableToken is StandardToken, Ownable { // TODO: see if it's better to have a locking agent sepparated from the owner
-
-    mapping(address => uint) lockedUntil;
-    bool lockingActive = true;
-
-    function lockAddressUntil(address who, uint timestamp) onlyOwner public {
-        require(lockingActive, "Locking must be active!");
-
-        lockedUntil[who] = timestamp;
-    }
-
-    modifier isNotLocked(){
-        require(lockedUntil[msg.sender] < now);
-        _;
-    }
-
-    function stopLockingForever() onlyOwner public {
-        lockingActive = false;
-    }
-
-    function transfer(address _to, uint256 _value) public isNotLocked returns (bool) {
-        return super.transfer(_to, _value);
-    }
-
-    function transferFrom(address _from, address _to, uint256 _value) public isNotLocked returns (bool) {
-        return super.transferFrom(_from, _to, _value);
-    }
-
-    function approve(address _spender, uint256 _value) public isNotLocked returns (bool) {
-        return super.approve(_spender, _value);
-    }
-
-    function increaseApproval(address _spender, uint _addedValue) public isNotLocked returns (bool success) {
-        return super.increaseApproval(_spender, _addedValue);
-    }
-
-    function decreaseApproval(address _spender, uint _subtractedValue) public isNotLocked returns (bool success) {
-        return super.decreaseApproval(_spender, _subtractedValue);
-    }
-
-    function getLockedUntil(address who) public view returns(uint){
-        return lockedUntil[who];
+    function burn(uint burnAmount) public {
+        address burner = msg.sender;
+        balances[burner] = safeSub(balances[burner], burnAmount);
+        totalSupply = safeSub(totalSupply, burnAmount);
+        emit Burned(burner, burnAmount);
     }
 }
 
@@ -390,44 +285,16 @@ contract AntiTheftToken is FreezableToken {
     }
 }
 
-contract LohnToken is PausableToken, LockableToken, AntiTheftToken {
-
-    bool distributedToTeam = false;
+contract BeerPointsToken is BurnableToken, AntiTheftToken {
 
     constructor() public {
-        symbol = "LOHN";
-        name = "LOHN";
+        symbol = "BP";
+        name = "Beer Points";
         decimals = 8;
 
         totalSupply = (10 ** (9 + decimals));
         balances[msg.sender] = totalSupply;
         emit Transfer(address(0x0), msg.sender, totalSupply);
-    }
-
-
-    // TODO: function for lock and transfer
-    function distributeTokens() public {
-        require(distributedToTeam == false);
-
-        uint tokensForTeamMember = (10 ** (7 + decimals));
-        transfer(0x841996929D83Acbb6F995B434625d7358a60e9ff, tokensForTeamMember); // Vasile Lupu
-        transfer(0xfFe2Bf4AC5a63f3F4B49D5B7A2bA1a510A21fa25, tokensForTeamMember); // Catalin Iordache
-        transfer(0x9608E4Af209FC56DF2383674C155E6A69Ff0D4E8, tokensForTeamMember); // Irina Masnita
-        transfer(0xb89E031d991e1F891A62540cD8731d6a7478bb99, tokensForTeamMember); // Daniela Ghitoiu
-        transfer(0xCf6f4181995A358478Fb0FFe9d34a59e0Cd7cD42, tokensForTeamMember); // Andrei Danciu
-        transfer(0x371976aA9Ed7ca3216Ff1e4C6047cd0FB97d7D16, tokensForTeamMember); // Raphael
-        transfer(0x257c190A914b4194bbE9aCfEAdBafb7012c643f6, tokensForTeamMember); // Ovidiu Stancalie
-        transfer(0x03749Becb794AA3791ED0f4F87db6651E1D37F8b, tokensForTeamMember); // Oana Taroiu
-        transfer(0x4984c73294aEB56D6a21B49f8156DE6DFf7FE215, tokensForTeamMember); // Sorin
-        transfer(0x6Ca8cc722Cc7478c90B1765C6a080c3206931668, tokensForTeamMember); // Hakan
-        transfer(0xA5B0dBdD4a25a017d4A18B0d9223f9a6e655bB75, tokensForTeamMember); // Popa Laurentiu
-
-        transfer(0x6A11e851ab9b75AdfF092a540718BDE0Cf81c7cD, tokensForTeamMember / 2); // Sean Brizendine - advisor
-        transfer(0x61b0615e69a713c846A58bDA249b6fcD0ceA565f, tokensForTeamMember / 2); // Hamza Khan - advisor
-
-        transfer(0x27b279A1CBe1529bC02D4Cb5CF8da5287831DB52, balances[msg.sender] - tokensForTeamMember); // transfer to foundation the rest and Leave the owner(Narcis) tokens
-
-        distributedToTeam = true;
     }
 
 }
