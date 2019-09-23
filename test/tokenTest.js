@@ -6,18 +6,18 @@
 const expectThrow = require('./expectThrow.js')
 const timeTravel = require('./timeTravel');
 const BigNumber = require('bignumber.js')
-var BeerPointsToken = artifacts.require("BeerPointsToken");
+var BeerCoin = artifacts.require("BeerCoin");
 
-const NAME = "Beer Points";
-const SYMBOL = "BP";
+const NAME = "Beer Coin";
+const SYMBOL = "BC";
 var DECIMALS = 8;
-const SUPPLY = 1000000000;
+const SUPPLY = 100000000;
 
 async function deployTokenContract() {
-    return await BeerPointsToken.new()
+    return await BeerCoin.new()
 }
 
-contract('BeerPointsToken', async (accounts) => {
+contract('BeerCoin', async (accounts) => {
 
     const TOTAL_SUPPLY_WITH_DECIMALS = new BigNumber(SUPPLY).mul(new BigNumber('10').pow(DECIMALS));
 

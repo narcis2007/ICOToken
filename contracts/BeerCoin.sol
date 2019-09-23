@@ -285,14 +285,14 @@ contract AntiTheftToken is FreezableToken {
     }
 }
 
-contract BeerPointsToken is BurnableToken, AntiTheftToken {
+contract BeerCoin is BurnableToken, AntiTheftToken {
 
     constructor() public {
-        symbol = "BP";
-        name = "Beer Points";
+        symbol = "BC";
+        name = "Beer Coin";
         decimals = 8;
 
-        totalSupply = (10 ** (9 + decimals));
+        totalSupply = (10 ** (8 + decimals));
         balances[msg.sender] = totalSupply;
         emit Transfer(address(0x0), msg.sender, totalSupply);
     }
